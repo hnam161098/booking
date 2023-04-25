@@ -1,6 +1,8 @@
 **MÔ TẢ**
 - Ví dụ đơn giản về luồng chạy của app đặt vé, được viết theo kiểu microservice, chia các module thành cách service riêng biệt
 
+![desciption](https://user-images.githubusercontent.com/83837519/234259510-0d419a28-f05e-49fd-ae6e-1ac2c8c58548.PNG)
+
 - language: Golang
 - database: Mongodb, elasticsearch
 - framework: gRPC, Gin
@@ -30,6 +32,7 @@ Demo được chia thành 2 service: customer và booking
 
 **Cách chạy**
 - "go run main.go" trong từng thưc mục của customer và booking service
+
 
 
 
