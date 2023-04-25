@@ -1,0 +1,51 @@
+syntax = "proto3";
+package asm;
+option go_package = "./;pb";
+
+
+service Customer{
+    rpc CreateCustomer(CustomerModel) returns (CustomerModel);
+    rpc GetCustomer(GetCustomerRequest) returns (CustomerModel);
+    rpc UpdateCustomer(CustomerModel) returns (CustomerModel);
+    rpc DeleteCustomer(CustomerModel) returns (DeleteCustomerResponse);
+    rpc GetAllCustomer(GetAllCustomerRequest) returns (AllCustomerResponse);
+    rpc AddTagsCustomer(AddTagsCustomerRequest) returns (CustomerModel);
+    rpc DeleteTagsOfCustomer(DeleteTagsOfCustomerRequest) returns (CustomerModel);
+}
+
+
+message CustomerModel{
+    string id = 1;
+    string name = 2;
+    string age = 3;
+    string address = 4;
+    string id_personal = 5;
+    repeated string tags = 6;
+    string created_at = 7;
+    string updated_at = 8;
+}
+
+message GetCustomerRequest{
+    string id_personal = 1;
+}
+
+message GetAllCustomerRequest{}
+
+message DeleteCustomerResponse{
+    int64 count = 1;
+}
+
+message DeleteTagsOfCustomerRequest{
+    string id = 1;
+    repeated string tags = 2;
+}
+
+message AddTagsCustomerRequest{
+    string id = 1;
+    repeated string tags = 2;
+}
+
+message AllCustomerResponse{
+    repeated CustomerModel customers = 1;
+}
+

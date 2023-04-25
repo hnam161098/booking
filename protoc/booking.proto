@@ -1,0 +1,35 @@
+syntax = "proto3";
+package asm;
+option go_package = "./;pb";
+import "protoc/customer.proto";
+
+service Booking {
+    rpc CreateTicket(TicketModel) returns(TicketModel);
+    rpc FindTicket(FindTicketRequest) returns (TicketInformation);
+}
+
+message TicketModel {
+    string id = 1;
+    string guess_name = 2;
+    string guess_id = 3;
+    string id_personal = 4;
+    string plane_id = 5;
+    string from = 6;
+    string to = 7;
+    string date = 8;
+    string created_at = 9;
+    string updated_at = 10;
+    string airport_id = 11;
+    string seat_name = 12;
+    int64 seat_id = 13;
+    int64 status = 14;
+}
+
+message FindTicketRequest{
+    string code = 1;
+}
+
+message TicketInformation{
+    CustomerModel customer_detail = 1;
+    TicketModel ticket_detail = 2;
+}
