@@ -1,16 +1,16 @@
 package helpers
 
 type ResponseJSON struct {
-	Status  bool
-	Message string
-	Error   string
-	Payload interface{}
+	Status  bool        `json:"status"`
+	Message string      `json:"message"`
+	Error   string      `json:"error"`
+	Payload interface{} `json:"payload"`
 }
 
 type ErrorResponse struct {
-	ErrorCode    int
-	ErrorMessage string
-	ErrorSystem  string
+	ErrorCode    int    `json:"error_code"`
+	ErrorMessage string `json:"error_message"`
+	ErrorSystem  string `json:"error_system"`
 }
 
 type ErrorResponseValidate struct {
