@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"grpc/config"
-	"log"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,19 +14,23 @@ type MongoInstance struct {
 	Db     *mongo.Database
 }
 
-var MongoDB MongoInstance
+var MongoDB *MongoInstance
 
-func init() {
+func ConnectMongo() *MongoInstance {
 	opts := options.Client().ApplyURI(config.MONGODB_ADDRESS["HOST"])
 	client, err := mongo.Connect(context.TODO(), opts)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	db := client.Database(config.MONGODB_ADDRESS["DATABASE"])
-	MongoDB = MongoInstance{
+	instance := MongoInstance{
 		Client: client,
 		Db:     db,
 	}
+	return &instance
+}
 
+func init() {
+	MongoDB = ConnectMongo()
 	fmt.Println("CONNECT MONGODB SUCCESS!")
 }

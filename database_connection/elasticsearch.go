@@ -1,8 +1,8 @@
 package database_connection
 
 import (
+	"fmt"
 	"grpc/config"
-	"log"
 
 	"github.com/elastic/go-elasticsearch"
 )
@@ -15,14 +15,12 @@ func ConnectES() *elasticsearch.Client {
 	}
 	ESConn, err := elasticsearch.NewClient(cfg)
 	if err != nil {
-		log.Println("CONNECTING ES ERROR")
-	}
-	if ESConn == nil {
-		log.Println("CONNECTING ES ERROR")
+		fmt.Println("CONNECTING ES ERROR")
 	}
 	return ESConn
 }
 
 func init() {
 	ESconnection = ConnectES()
+	fmt.Println("CONNECT ELASTICSEARCH SUCCESS!")
 }

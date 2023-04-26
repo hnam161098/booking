@@ -19,21 +19,21 @@ func MappingResultEStoCustomerPbModel(m map[string]interface{}) *pb.CustomerMode
 		}
 	}()
 
-	rsES := m["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"]
+	rsES := m["_source"].(map[string]interface{})
 	listTags := []string{}
-	for _, item := range rsES.(map[string]interface{})["tags"].([]interface{}) {
+
+	for _, item := range rsES["tags"].([]interface{}) {
 		listTags = append(listTags, item.(string))
 	}
-
 	result := &pb.CustomerModel{
-		Id:         rsES.(map[string]interface{})["id"].(string),
-		Name:       rsES.(map[string]interface{})["name"].(string),
-		IdPersonal: rsES.(map[string]interface{})["id_personal"].(string),
-		Age:        rsES.(map[string]interface{})["age"].(string),
-		Address:    rsES.(map[string]interface{})["address"].(string),
+		Id:         rsES["id"].(string),
+		Name:       rsES["name"].(string),
+		IdPersonal: rsES["id_personal"].(string),
+		Age:        rsES["age"].(string),
+		Address:    rsES["address"].(string),
 		Tags:       listTags,
-		CreatedAt:  rsES.(map[string]interface{})["created_at"].(string),
-		UpdatedAt:  rsES.(map[string]interface{})["updated_at"].(string),
+		CreatedAt:  rsES["created_at"].(string),
+		UpdatedAt:  rsES["updated_at"].(string),
 	}
 	return result
 
@@ -72,30 +72,17 @@ func (c *CustomerHandlerStruct) CreateCustomer(ctx context.Context, in *pb.Custo
 		}
 	}()
 
-	result := &pb.CustomerModel{
-		Id:         customer.ID,
-		Name:       customer.Name,
-		IdPersonal: customer.IdPersonal,
-		Address:    customer.Address,
-		Age:        customer.Age,
-		Tags:       customer.Tags,
-		CreatedAt:  customer.CreatedAt,
-		UpdatedAt:  customer.UpdatedAt,
-	}
-
+	result := MappingCreateCustomerToPbModel(customer)
 	return result, nil
 }
 
 func (c *CustomerHandlerStruct) GetCustomer(ctx context.Context, in *pb.GetCustomerRequest) (*pb.CustomerModel, error) {
-
 	// get from Elasticsearch
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
-			"bool": map[string]interface{}{
-				"must": map[string]interface{}{
-					"match": map[string]interface{}{
-						"id_personal": in.IdPersonal,
-					},
+			"term": map[string]interface{}{
+				"id_personal": map[string]interface{}{
+					"value": in.IdPersonal,
 				},
 			},
 		},
@@ -104,12 +91,10 @@ func (c *CustomerHandlerStruct) GetCustomer(ctx context.Context, in *pb.GetCusto
 	if err != nil {
 		return nil, err
 	}
-
 	if rsES["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64) == 0 {
 		return nil, errors.New("Customer not exist")
 	}
-
-	customer := MappingResultEStoCustomerPbModel(rsES)
+	customer := MappingResultEStoCustomerPbModel(rsES["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{}))
 	return customer, nil
 }
 
@@ -129,45 +114,34 @@ func (c *CustomerHandlerStruct) UpdateCustomer(ctx context.Context, in *pb.Custo
 	// sync ES
 	go func() {
 		queryES := map[string]interface{}{
-			"id":         customer.ID,
-			"name":       customer.Name,
-			"age":        customer.Age,
-			"address":    customer.Address,
-			"tags":       customer.Tags,
-			"created_at": customer.CreatedAt,
-			"updated_at": customer.UpdatedAt,
+			"id":          customer.ID,
+			"name":        customer.Name,
+			"id_personal": customer.IdPersonal,
+			"age":         customer.Age,
+			"address":     customer.Address,
+			"tags":        customer.Tags,
+			"created_at":  customer.CreatedAt,
+			"updated_at":  customer.UpdatedAt,
 		}
-
 		errUpdate := helpers.UpdateES(models.IndexCustomer, queryES, customer.ID)
 		if errUpdate != nil {
 			log.Println(errUpdate)
 		}
 	}()
 
-	result := &pb.CustomerModel{
-		Id:        customer.ID,
-		Name:      customer.Name,
-		Age:       customer.Age,
-		Address:   customer.Address,
-		Tags:      customer.Tags,
-		CreatedAt: customer.CreatedAt,
-		UpdatedAt: customer.UpdatedAt,
-	}
+	result := MappingUpdateCustomerToPbModel(customer)
 	return result, nil
-
 }
 
 func (c *CustomerHandlerStruct) DeleteCustomer(ctx context.Context, in *pb.CustomerModel) (*pb.DeleteCustomerResponse, error) {
 	req := models.Customer{
 		ID: in.Id,
 	}
-
 	// delete in mongoDB
 	count, err := c.CustomerHandler.DeleteCustomer(ctx, &req)
 	if err != nil {
 		return nil, err
 	}
-
 	// delete in ES
 	go func() {
 		queryES := map[string]interface{}{
@@ -186,7 +160,6 @@ func (c *CustomerHandlerStruct) DeleteCustomer(ctx context.Context, in *pb.Custo
 			log.Println(errES)
 		}
 	}()
-
 	return &pb.DeleteCustomerResponse{
 		Count: int64(count),
 	}, nil
@@ -199,33 +172,22 @@ func (c *CustomerHandlerStruct) GetAllCustomer(ctx context.Context, in *pb.GetAl
 			"match_all": map[string]interface{}{},
 		},
 	}
-	totalRecord, err := helpers.QueryES(models.IndexCustomer, queryES)
+	totalDocs, err := helpers.QueryES(models.IndexCustomer, queryES)
 	if err != nil {
 		return nil, err
 	}
-
 	var result []*pb.CustomerModel
-	listRecord := totalRecord["hits"].(map[string]interface{})["hits"].([]interface{})
-	for _, customer := range listRecord {
+	listDataES := totalDocs["hits"].(map[string]interface{})["hits"].([]interface{})
+	for _, customer := range listDataES {
 		listTags := []string{}
 		if customer.(map[string]interface{})["_source"].(map[string]interface{})["tags"] != nil {
 			for _, item := range customer.(map[string]interface{})["_source"].(map[string]interface{})["tags"].([]interface{}) {
 				listTags = append(listTags, item.(string))
 			}
 		}
-		cus := &pb.CustomerModel{
-			Id:         customer.(map[string]interface{})["_source"].(map[string]interface{})["id"].(string),
-			Name:       customer.(map[string]interface{})["_source"].(map[string]interface{})["name"].(string),
-			IdPersonal: customer.(map[string]interface{})["_source"].(map[string]interface{})["id_personal"].(string),
-			Age:        customer.(map[string]interface{})["_source"].(map[string]interface{})["age"].(string),
-			Tags:       listTags,
-			Address:    customer.(map[string]interface{})["_source"].(map[string]interface{})["address"].(string),
-			CreatedAt:  customer.(map[string]interface{})["_source"].(map[string]interface{})["created_at"].(string),
-			UpdatedAt:  customer.(map[string]interface{})["_source"].(map[string]interface{})["updated_at"].(string),
-		}
+		cus := MappingResultEStoCustomerPbModel(customer.(map[string]interface{}))
 		result = append(result, cus)
 	}
-
 	return &pb.AllCustomerResponse{
 		Customers: result,
 	}, nil
@@ -236,35 +198,23 @@ func (c *CustomerHandlerStruct) AddTagsCustomer(ctx context.Context, in *pb.AddT
 		ID:   in.Id,
 		Tags: in.Tags,
 	}
-
-	cus, err := c.CustomerHandler.AddTagsCustomer(ctx, &req)
+	customer, err := c.CustomerHandler.AddTagsCustomer(ctx, &req)
 	if err != nil {
 		return nil, err
 	}
-
 	// sync to ES
 	go func() {
 		queryES := map[string]interface{}{
-			"id":         cus.ID,
-			"tags":       cus.Tags,
-			"updated_at": cus.UpdatedAt,
+			"id":         customer.ID,
+			"tags":       customer.Tags,
+			"updated_at": customer.UpdatedAt,
 		}
-
-		errUpdate := helpers.UpdateES(models.IndexCustomer, queryES, cus.ID)
+		errUpdate := helpers.UpdateES(models.IndexCustomer, queryES, customer.ID)
 		if errUpdate != nil {
 			log.Println(errUpdate)
 		}
 	}()
-
-	result := &pb.CustomerModel{
-		Id:        cus.ID,
-		Name:      cus.Name,
-		Age:       cus.Age,
-		Address:   cus.Address,
-		Tags:      cus.Tags,
-		CreatedAt: cus.CreatedAt,
-		UpdatedAt: time.Now().Format(time.RFC3339),
-	}
+	result := MappingAddTagsCustomerToPbModel(customer)
 	return result, nil
 }
 
@@ -273,18 +223,11 @@ func (c *CustomerHandlerStruct) DeleteTagsOfCustomer(ctx context.Context, in *pb
 		ID:   in.Id,
 		Tags: in.Tags,
 	}
-	cus, err := c.CustomerHandler.DeleteTagsOfCustomer(ctx, &req)
+	customer, err := c.CustomerHandler.DeleteTagsOfCustomer(ctx, &req)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.CustomerModel{
-		Id:        cus.ID,
-		Name:      cus.Name,
-		Age:       cus.Age,
-		Tags:      cus.Tags,
-		Address:   cus.Address,
-		CreatedAt: cus.CreatedAt,
-		UpdatedAt: time.Now().Format(time.RFC3339),
-	}, nil
+	result := MappingDeleteTagsCustomerToPbModel(customer)
+	return result, nil
 
 }

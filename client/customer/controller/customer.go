@@ -1,12 +1,12 @@
 package controller
 
 import (
+	"fmt"
 	"grpc/client/customer/requests"
 	"grpc/client/customer/responses"
 	"grpc/helpers"
 	"grpc/pb"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,13 +23,7 @@ func (h *CustomerHandler) CreateCustomer(c *gin.Context) {
 		return
 	}
 
-	newCustomer, err := h.Client.CreateCustomer(c.Request.Context(), &pb.CustomerModel{
-		Name:       body.Name,
-		IdPersonal: body.IdPersonal,
-		Age:        body.Age,
-		Address:    body.Address,
-		Tags:       body.Tags,
-	})
+	newCustomer, err := h.Client.CreateCustomer(c.Request.Context(), MappingCreateCustomerRequest(body))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["CREATE_CUSTOMER_ERROR"],
@@ -39,16 +33,7 @@ func (h *CustomerHandler) CreateCustomer(c *gin.Context) {
 		return
 	}
 
-	result := responses.CustomerModelResponse{
-		ID:         newCustomer.Id,
-		Name:       newCustomer.Name,
-		IdPersonal: newCustomer.IdPersonal,
-		Age:        newCustomer.Age,
-		Address:    newCustomer.Address,
-		Tags:       newCustomer.Tags,
-		CreatedAt:  time.Now().Format(time.RFC3339),
-		UpdatedAt:  time.Now().Format(time.RFC3339),
-	}
+	result := MappingCustomerResponse(newCustomer)
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
 		Message: "SUCCESS",
@@ -69,9 +54,7 @@ func (h *CustomerHandler) GetCustomer(c *gin.Context) {
 		})
 		return
 	}
-	customer, err := h.Client.GetCustomer(c.Request.Context(), &pb.GetCustomerRequest{
-		IdPersonal: body.IdPersonal,
-	})
+	customer, err := h.Client.GetCustomer(c.Request.Context(), &pb.GetCustomerRequest{IdPersonal: body.IdPersonal})
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["FIND_CUSTOMER_ERROR"],
@@ -81,17 +64,7 @@ func (h *CustomerHandler) GetCustomer(c *gin.Context) {
 		return
 	}
 
-	result := responses.CustomerModelResponse{
-		ID:         customer.Id,
-		Name:       customer.Name,
-		IdPersonal: customer.IdPersonal,
-		Age:        customer.Age,
-		Address:    customer.Address,
-		Tags:       customer.Tags,
-		CreatedAt:  customer.CreatedAt,
-		UpdatedAt:  customer.UpdatedAt,
-	}
-
+	result := MappingCustomerResponse(customer)
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
 		Message: "SUCCESS",
@@ -99,7 +72,6 @@ func (h *CustomerHandler) GetCustomer(c *gin.Context) {
 		Payload: result,
 	})
 	return
-
 }
 
 // update customer
@@ -113,13 +85,7 @@ func (h *CustomerHandler) UpdateCustomer(c *gin.Context) {
 		})
 		return
 	}
-	newCustomer, err := h.Client.UpdateCustomer(c.Request.Context(), &pb.CustomerModel{
-		Id:      body.ID,
-		Name:    body.Name,
-		Age:     body.Age,
-		Address: body.Address,
-		Tags:    body.Tags,
-	})
+	customer, err := h.Client.UpdateCustomer(c.Request.Context(), MappingUpdateCustomerRequest(body))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["UPDATE_CUSTOMER_ERROR"],
@@ -129,17 +95,7 @@ func (h *CustomerHandler) UpdateCustomer(c *gin.Context) {
 		return
 	}
 
-	result := responses.CustomerModelResponse{
-		ID:         newCustomer.Id,
-		Name:       newCustomer.Name,
-		IdPersonal: newCustomer.IdPersonal,
-		Age:        newCustomer.Age,
-		Address:    newCustomer.Address,
-		Tags:       newCustomer.Tags,
-		CreatedAt:  newCustomer.CreatedAt,
-		UpdatedAt:  newCustomer.UpdatedAt,
-	}
-
+	result := MappingCustomerResponse(customer)
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
 		Message: "SUCCESS",
@@ -161,9 +117,7 @@ func (h *CustomerHandler) DeleteCustomer(c *gin.Context) {
 		return
 	}
 
-	rs, err := h.Client.DeleteCustomer(c.Request.Context(), &pb.CustomerModel{
-		Id: body.ID,
-	})
+	rs, err := h.Client.DeleteCustomer(c.Request.Context(), &pb.CustomerModel{Id: body.ID})
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["DELETE_CUSTOMER_ERROR"],
@@ -202,17 +156,7 @@ func (h *CustomerHandler) GetAllCustomer(c *gin.Context) {
 	}
 	result := []responses.CustomerModelResponse{}
 	for _, item := range customers.Customers {
-		customer := responses.CustomerModelResponse{
-			ID:         item.Id,
-			Name:       item.Name,
-			IdPersonal: item.IdPersonal,
-			Age:        item.Age,
-			Tags:       item.Tags,
-			Address:    item.Address,
-			CreatedAt:  item.CreatedAt,
-			UpdatedAt:  item.UpdatedAt,
-		}
-		result = append(result, customer)
+		result = append(result, MappingCustomerResponse(item))
 	}
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
@@ -234,10 +178,7 @@ func (h *CustomerHandler) AddTagsCustomer(c *gin.Context) {
 		})
 		return
 	}
-	customer, err := h.Client.AddTagsCustomer(c.Request.Context(), &pb.AddTagsCustomerRequest{
-		Id:   body.ID,
-		Tags: body.Tags,
-	})
+	customer, err := h.Client.AddTagsCustomer(c.Request.Context(), MappingAddTagsCustomerRequest(body))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["ADD_TAGS_CUSTOMER_ERROR"],
@@ -247,15 +188,7 @@ func (h *CustomerHandler) AddTagsCustomer(c *gin.Context) {
 		return
 	}
 
-	result := responses.CustomerModelResponse{
-		ID:        customer.Id,
-		Name:      customer.Name,
-		Age:       customer.Age,
-		Address:   customer.Address,
-		Tags:      customer.Tags,
-		CreatedAt: customer.CreatedAt,
-		UpdatedAt: customer.UpdatedAt,
-	}
+	result := MappingCustomerResponse(customer)
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
 		Message: "SUCCESS",
@@ -277,10 +210,7 @@ func (h *CustomerHandler) DeleteTagsOfCustomer(c *gin.Context) {
 		})
 		return
 	}
-	customer, err := h.Client.DeleteTagsOfCustomer(c.Request.Context(), &pb.DeleteTagsOfCustomerRequest{
-		Id:   body.ID,
-		Tags: body.Tags,
-	})
+	customer, err := h.Client.DeleteTagsOfCustomer(c.Request.Context(), MappingDeleteTagsCustomerRequest(body))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, helpers.ErrorResponse{
 			ErrorCode:    helpers.ErrorsCustomer["DELETE_TAGS_CUSTOMER_ERROR"],
@@ -289,15 +219,8 @@ func (h *CustomerHandler) DeleteTagsOfCustomer(c *gin.Context) {
 		})
 		return
 	}
-	result := responses.CustomerModelResponse{
-		ID:        customer.Id,
-		Name:      customer.Name,
-		Age:       customer.Age,
-		Address:   customer.Address,
-		Tags:      customer.Tags,
-		CreatedAt: customer.CreatedAt,
-		UpdatedAt: customer.UpdatedAt,
-	}
+	fmt.Println("customer: ", customer)
+	result := MappingCustomerResponse(customer)
 	c.JSON(http.StatusOK, helpers.ResponseJSON{
 		Status:  true,
 		Message: "DELETE SUCCESS",

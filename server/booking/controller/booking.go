@@ -20,7 +20,6 @@ func (c *BookingHandlerStruct) CreateTicket(ctx context.Context, in *pb.TicketMo
 	if customer.Id == "" {
 		return nil, nil
 	}
-
 	in.Status = 1
 	req := models.Ticket{
 		ID:         in.Id,
@@ -43,23 +42,7 @@ func (c *BookingHandlerStruct) CreateTicket(ctx context.Context, in *pb.TicketMo
 	if err != nil {
 		return nil, err
 	}
-
-	result := &pb.TicketModel{
-		Id:         ticket.ID,
-		GuessId:    ticket.GuessId,
-		GuessName:  ticket.GuessName,
-		IdPersonal: ticket.IdPersonal,
-		From:       ticket.From,
-		To:         ticket.To,
-		Date:       ticket.Date,
-		PlaneId:    ticket.PlaneID,
-		SeatName:   ticket.SeatName,
-		SeatId:     ticket.SeatID,
-		AirportId:  ticket.AirportID,
-		Status:     ticket.Status,
-		CreatedAt:  ticket.CreatedAt,
-		UpdatedAt:  ticket.UpdatedAt,
-	}
+	result := MappingCreateTicketToPbModel(ticket)
 	// sync to ES
 	go func() {
 		err1 := helpers.InsertDocumentES("ticket", result, ticket.ID)
@@ -67,7 +50,6 @@ func (c *BookingHandlerStruct) CreateTicket(ctx context.Context, in *pb.TicketMo
 			log.Println(err1)
 		}
 	}()
-
 	return result, nil
 }
 
@@ -77,12 +59,13 @@ func (c *BookingHandlerStruct) FindTicket(ctx context.Context, in *pb.FindTicket
 	if errT != nil {
 		return nil, errT
 	}
-
 	customer, errC := c.CustomerClient.GetCustomer(ctx, &pb.GetCustomerRequest{IdPersonal: ticket.IdPersonal})
 	if errC != nil {
 		return nil, errC
 	}
-	// insert document lên Elasticsearch
+	ticket.GuessName = customer.Name
+	ticketInformation := MappingFindTicketToPbModel(ticket)
+	// update ticket ES
 	go func() {
 		queryES := map[string]interface{}{
 			"guess_name":  customer.Name,
@@ -90,28 +73,9 @@ func (c *BookingHandlerStruct) FindTicket(ctx context.Context, in *pb.FindTicket
 		}
 		err1 := helpers.UpdateES("ticket", queryES, ticket.ID)
 		if err1 != nil {
-			log.Println(err1)
+			log.Printf("Cannot update ES: %v", err1)
 		}
 	}()
-
-	ticketInformation := &pb.TicketModel{
-		Id:         ticket.ID,
-		GuessId:    ticket.GuessId,
-		GuessName:  ticket.GuessName,
-		IdPersonal: ticket.IdPersonal,
-		From:       ticket.From,
-		To:         ticket.To,
-		Date:       ticket.Date,
-		PlaneId:    ticket.PlaneID,
-		SeatName:   ticket.SeatName,
-		SeatId:     ticket.SeatID,
-		AirportId:  ticket.AirportID,
-		Status:     ticket.Status,
-		CreatedAt:  ticket.CreatedAt,
-		UpdatedAt:  ticket.UpdatedAt,
-	}
-	// customerInformation := customer
-
 	result := pb.TicketInformation{
 		CustomerDetail: customer,
 		TicketDetail:   ticketInformation,

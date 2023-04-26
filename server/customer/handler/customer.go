@@ -31,7 +31,6 @@ func (m *DbManager) CreateCustomer(ctx context.Context, model *models.Customer) 
 		"created_at":  model.CreatedAt,
 		"updated_at":  model.UpdatedAt,
 	}
-
 	// check exist
 	filterCheck := bson.M{
 		"id_personal": model.IdPersonal,
@@ -41,12 +40,10 @@ func (m *DbManager) CreateCustomer(ctx context.Context, model *models.Customer) 
 	if errF == nil || customerExist.Name != "" {
 		return &models.Customer{}, errors.New("Customer aready exist")
 	}
-
 	rs, err := m.collection.InsertOne(context.TODO(), filter)
 	if err != nil {
 		return nil, err
 	}
-
 	return &models.Customer{
 		ID:         rs.InsertedID.(primitive.ObjectID).Hex(),
 		Name:       model.Name,
@@ -61,7 +58,6 @@ func (m *DbManager) CreateCustomer(ctx context.Context, model *models.Customer) 
 
 func (m *DbManager) GetCustomer(ctx context.Context, model *models.CustomerRequest) (*models.Customer, error) {
 	var result models.Customer
-
 	filter := bson.M{
 		"id_personal": model.IdPersonal,
 	}
@@ -69,7 +65,6 @@ func (m *DbManager) GetCustomer(ctx context.Context, model *models.CustomerReque
 	if err != nil {
 		return nil, err
 	}
-
 	return &result, nil
 
 }
@@ -84,13 +79,10 @@ func CheckDuplicate(sli []string, s string) bool {
 }
 
 func (m *DbManager) UpdateCustomer(ctx context.Context, model *models.Customer) (*models.Customer, error) {
-
 	id, _ := primitive.ObjectIDFromHex(model.ID)
-
 	filter := bson.M{
 		"_id": id,
 	}
-
 	var cus models.Customer
 	_ = m.collection.FindOne(context.TODO(), filter).Decode(&cus)
 
@@ -112,11 +104,9 @@ func (m *DbManager) UpdateCustomer(ctx context.Context, model *models.Customer) 
 			"updated_at": time.Now().Format(time.RFC3339),
 		},
 	}
-
 	var customer *models.Customer
 	opt := options.FindOneAndUpdateOptions{}
 	opt.SetReturnDocument(1)
-
 	err := m.collection.FindOneAndUpdate(context.TODO(), filter, update, &opt).Decode(&customer)
 	if err != nil {
 		return nil, err
@@ -127,23 +117,19 @@ func (m *DbManager) UpdateCustomer(ctx context.Context, model *models.Customer) 
 
 func (m *DbManager) DeleteCustomer(ctx context.Context, model *models.Customer) (int, error) {
 	id, _ := primitive.ObjectIDFromHex(model.ID)
-
 	filter := bson.M{
 		"_id": id,
 	}
-
 	rs, err := m.collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
 		return 0, err
 	}
-
 	return int(rs.DeletedCount), nil
 
 }
 
 func (m *DbManager) GetAllCustomer(ctx context.Context) ([]*models.Customer, error) {
 	var customers []*models.Customer
-
 	cursor, err := m.collection.Find(context.TODO(), bson.M{})
 	if err != nil {
 		return nil, err
@@ -160,15 +146,16 @@ func (m *DbManager) AddTagsCustomer(ctx context.Context, model *models.AddTags) 
 	filter := bson.M{
 		"_id": id,
 	}
-
 	var cus models.Customer
 	_ = m.collection.FindOne(context.TODO(), filter).Decode(&cus)
 	if len(model.Tags) == 0 {
 		model.Tags = cus.Tags
 	} else {
-		for _, v := range model.Tags {
-			if CheckDuplicate(cus.Tags, v) == false {
-				cus.Tags = append(cus.Tags, v)
+		for _, tag := range model.Tags {
+			if CheckDuplicate(model.Tags, tag) == false {
+				if tag != "" {
+					cus.Tags = append(cus.Tags, tag)
+				}
 			}
 		}
 		model.Tags = cus.Tags
@@ -179,10 +166,8 @@ func (m *DbManager) AddTagsCustomer(ctx context.Context, model *models.AddTags) 
 			"updated_at": time.Now().Format(time.RFC3339),
 		},
 	}
-
 	opt := options.FindOneAndUpdateOptions{}
 	opt.SetReturnDocument(1)
-
 	var customer models.Customer
 	err := m.collection.FindOneAndUpdate(ctx, filter, updateQuery, &opt).Decode(&customer)
 	if err != nil {
@@ -197,7 +182,6 @@ func (m *DbManager) DeleteTagsOfCustomer(ctx context.Context, model *models.Dele
 	filter := bson.M{
 		"_id": id,
 	}
-
 	deleteQuery := bson.M{
 		"$pull": bson.M{
 			"tags": bson.M{
@@ -209,12 +193,10 @@ func (m *DbManager) DeleteTagsOfCustomer(ctx context.Context, model *models.Dele
 	if err != nil {
 		return nil, err
 	}
-
 	err1 := m.collection.FindOne(ctx, filter).Decode(&customer)
 	if err1 != nil {
 		return nil, err1
 	}
-
 	return &customer, nil
 
 }
